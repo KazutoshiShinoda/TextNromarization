@@ -1,0 +1,56 @@
+from gensim.models import word2vec
+import numpy as np
+import sys
+
+INPUT_PATH = "../../input/"
+OUTPUT_PATH = "../../output/"
+
+def main():
+    files = ['output_1.csv', 'output_6.csv', 'output_11.csv', 'output_16.csv',
+'output_21.csv', 'output_91.csv', 'output_96.csv']
+        data = []
+    n_sen=0
+    is_first = True
+    for i, file in enumerate(files):
+        source = open(INPUT_PATH + file, encoding='UTF8')
+        line = source.readline()
+        sentence = []
+        while 1:
+            line = source.readline().strip()
+            if line == '':
+                break
+            line = line.replace(',NA,', ',"NA",')
+            pos = line.find('","')
+            text = line[pos + 2:]
+            if text[:3] == '","':
+                #カンマは無視
+                continue
+            text = text[1:-1]
+            arr = text.split('","')
+            if arr[0].isdigit():
+                if len(arr[0])==4:
+                    arr[0] = "<YEAR>"
+                elif len(arr[0])==3:
+                    arr[0] = "<3_DIGIT>"
+                elif len(arr[0])==2:
+                    arr[0] = "<2_DIGIT>"
+            if arr[0] != '<eos>':
+                sentence.append(arr[0])
+            else:
+                data.append(sentence)
+                if len(data) == 10000:
+                    if is_first:
+                        model = word2vec.Word2Vec(data, size=128, window=5, min_count=1, workers=4)
+                    else:
+                        model.train(data)
+                    n_sen += 10000
+                    if n_sen % 100000 == 0:
+                        print("Trained %i sentences. Now in %s" % (n_sen, file))
+                    data=[]
+                sentence = []
+        model.save(OUTPUT_PATH+'embeddings_'+str(i)+'.model')
+        print("=>saved the model: "+OUTPUT_PATH+'embeddings_'+str(i)+'.model')
+    print("=>successfully finished!")
+
+if __name__=='__main__':
+    main()
